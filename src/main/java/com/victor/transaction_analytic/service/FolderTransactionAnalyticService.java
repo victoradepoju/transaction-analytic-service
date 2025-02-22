@@ -1,16 +1,19 @@
 package com.victor.transaction_analytic.service;
 
+import com.victor.transaction_analytic.dto.TransactionAnalyticResponseDto;
 import com.victor.transaction_analytic.model.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.YearMonth;
 import java.util.*;
 
 @Service
@@ -24,7 +27,7 @@ public class FolderTransactionAnalyticService {
         this.singleFileService = singleFileService;
     }
 
-    public BigDecimal analyzeFolder(String folderPath) {
+    public TransactionAnalyticResponseDto analyzeTransactions(String folderPath) {
         try {
             List<Path> files = Files.list(Paths.get(folderPath))
                     .filter(Files::isRegularFile)
@@ -32,26 +35,29 @@ public class FolderTransactionAnalyticService {
 
             if (files.isEmpty()) {
                 logger.warn("No files found in the folder: {}", folderPath);
-                return BigDecimal.ZERO;
+                throw new FileNotFoundException("Folder not found");
             }
 
-            Optional<BigDecimal> maxSales = files.stream()
-                    .map(file -> {
-                        try {
-                            singleFileService.loadTransactions(file.toString());
-                            return singleFileService.highestSalesValueInADay();
-                        } catch (IOException e) {
-                            logger.error("Error processing file: {}", file, e);
-                            return BigDecimal.ZERO;
-                        }
-                    })
-                    .max(Comparator.naturalOrder());
+            BigDecimal volume = highestSalesVolumeInADay(folderPath, true, files);
+            BigDecimal value = highestSaleValueInADay(folderPath, true, files);
+            Map<YearMonth, String> staffs = highestSalesStaffByMonth(folderPath, true, files);
+            int hour = highestHourByAverageTransactionVolume(folderPath, true, files);
+            String product = mostSoldProductByVolume(folderPath, true, files);
 
-            if (maxSales.isPresent()) {
-                BigDecimal result = maxSales.get();
-                logger.info("Highest sales value across all days: {}", result);
-                return result;
-            }
+            return new TransactionAnalyticResponseDto(volume, value, product, staffs, hour);
+
+
+        } catch (IOException e) {
+            logger.error("Error reading folder: {}", folderPath, e);
+        }
+
+        return null;
+    }
+
+    public BigDecimal highestSaleValueInADay(String folderPath, boolean isAll, List<Path> passedFiles) {
+        try {
+            BigDecimal zero = getSalesValue(folderPath, isAll, passedFiles);
+            if (zero != null) return zero;
 
         } catch (IOException e) {
             logger.error("Error reading folder: {}", folderPath, e);
@@ -60,17 +66,52 @@ public class FolderTransactionAnalyticService {
         return BigDecimal.ZERO;
     }
 
-    /**
-     * Analyzes all files in the folder and returns the highest sales volume (sum of sales) in a day.
-     *
-     * @param folderPath The path to the folder containing transaction files.
-     * @return The highest sales volume in a day.
-     */
-    public BigDecimal highestSalesVolumeInADay(String folderPath) {
-        try {
-            List<Path> files = Files.list(Paths.get(folderPath))
+    private BigDecimal getSalesValue(String folderPath, boolean isAll, List<Path> passedFiles) throws IOException {
+        List<Path> files;
+        if (!isAll) {
+            files = Files.list(Paths.get(folderPath))
                     .filter(Files::isRegularFile)
                     .toList();
+        } else {
+            files = passedFiles;
+        }
+
+        if (files.isEmpty()) {
+            logger.warn("No files found in the folder: {}", folderPath);
+            return BigDecimal.ZERO;
+        }
+
+        Optional<BigDecimal> maxSales = files.stream()
+                .map(file -> {
+                    try {
+                        singleFileService.loadTransactions(file.toString());
+                        return singleFileService.highestSalesValueInADay();
+                    } catch (IOException e) {
+                        logger.error("Error processing file: {}", file, e);
+                        return BigDecimal.ZERO;
+                    }
+                })
+                .max(Comparator.naturalOrder());
+
+        if (maxSales.isPresent()) {
+            BigDecimal result = maxSales.get();
+            logger.info("Highest sales value across all days: {}", result);
+            return result;
+        }
+        return null;
+    }
+
+    public BigDecimal highestSalesVolumeInADay(String folderPath, boolean isAll, List<Path> passedFiles) {
+        try {
+            List<Path> files;
+
+            if (!isAll) {
+                files = Files.list(Paths.get(folderPath))
+                        .filter(Files::isRegularFile)
+                        .toList();
+            } else {
+                files = passedFiles;
+            }
 
             if (files.isEmpty()) {
                 logger.warn("No files found in the folder: {}", folderPath);
@@ -102,11 +143,17 @@ public class FolderTransactionAnalyticService {
         return BigDecimal.ZERO;
     }
 
-    public String mostSoldProductByVolume(String folderPath) {
+    public String mostSoldProductByVolume(String folderPath, boolean isAll, List<Path> passedFiles) {
         try {
-            List<Path> files = Files.list(Paths.get(folderPath))
-                    .filter(Files::isRegularFile)
-                    .toList();
+            List<Path> files;
+
+            if (!isAll) {
+                files = Files.list(Paths.get(folderPath))
+                        .filter(Files::isRegularFile)
+                        .toList();
+            } else {
+                files = passedFiles;
+            }
 
             if (files.isEmpty()) {
                 logger.warn("No files found in the folder: {}", folderPath);
@@ -144,12 +191,90 @@ public class FolderTransactionAnalyticService {
         return null;
     }
 
-    public int highestHourByAverageTransactionVolume(String folderPath) {
+    public Map<YearMonth, String> highestSalesStaffByMonth(String folderPath, boolean isAll, List<Path> passedFiles) {
         try {
-            // Get all files in the folder
-            List<Path> files = Files.list(Paths.get(folderPath))
-                    .filter(Files::isRegularFile)
-                    .toList();
+            List<Path> files;
+
+            if (!isAll) {
+                files = Files.list(Paths.get(folderPath))
+                        .filter(Files::isRegularFile)
+                        .toList();
+            } else {
+                files = passedFiles;
+            }
+
+            if (files.isEmpty()) {
+                logger.warn("No files found in the folder: {}", folderPath);
+                return Collections.emptyMap();
+            }
+
+            // Map to store total sales volume by staff ID for each month
+            Map<YearMonth, Map<String, BigDecimal>> monthStaffSalesMap = new HashMap<>();
+
+            // Process each file
+            for (Path file : files) {
+                try {
+                    // Load transactions from the file
+                    singleFileService.loadTransactions(file.toString());
+                    // Update the month-staff sales map with data from this file
+                    updateMonthStaffSalesMap(singleFileService.getTransactions(), monthStaffSalesMap);
+                } catch (IOException e) {
+                    logger.error("Error processing file: {}", file, e);
+                }
+            }
+
+            // Find the highest sales staff ID for each month
+            Map<YearMonth, String> highestSalesStaffMap = new HashMap<>();
+            for (Map.Entry<YearMonth, Map<String, BigDecimal>> entry : monthStaffSalesMap.entrySet()) {
+                YearMonth month = entry.getKey();
+                Map<String, BigDecimal> staffSalesMap = entry.getValue();
+
+                Optional<Map.Entry<String, BigDecimal>> maxStaffEntry = staffSalesMap.entrySet()
+                        .stream()
+                        .max(Map.Entry.comparingByValue());
+
+                if (maxStaffEntry.isPresent()) {
+                    String staffId = maxStaffEntry.get().getKey();
+                    BigDecimal totalSales = maxStaffEntry.get().getValue();
+                    highestSalesStaffMap.put(month, staffId);
+                    logger.info("Highest sales staff for {}: {}, Total sales: {}", month, staffId, totalSales);
+                }
+            }
+
+            return highestSalesStaffMap;
+
+        } catch (IOException e) {
+            logger.error("Error reading folder: {}", folderPath, e);
+        }
+
+        return Collections.emptyMap();
+    }
+
+    private void updateMonthStaffSalesMap(List<Transaction> transactions, Map<YearMonth, Map<String, BigDecimal>> monthStaffSalesMap) {
+        for (Transaction transaction : transactions) {
+            YearMonth month = YearMonth.from(transaction.getTransactionTime());
+            String staffId = String.valueOf(transaction.getTransactionId()); // Assuming transaction ID is the staff ID
+            BigDecimal saleAmount = transaction.getSaleAmount();
+
+            // Get or create the staff sales map for the month
+            Map<String, BigDecimal> staffSalesMap = monthStaffSalesMap.computeIfAbsent(month, k -> new HashMap<>());
+
+            // Update the total sales volume for the staff ID
+            staffSalesMap.merge(staffId, saleAmount, BigDecimal::add);
+        }
+    }
+
+    public int highestHourByAverageTransactionVolume(String folderPath, boolean isAll, List<Path> passedFiles) {
+        try {
+            List<Path> files;
+
+            if (!isAll) {
+                files = Files.list(Paths.get(folderPath))
+                        .filter(Files::isRegularFile)
+                        .toList();
+            } else {
+                files = passedFiles;
+            }
 
             if (files.isEmpty()) {
                 logger.warn("No files found in the folder: {}", folderPath);
@@ -213,4 +338,5 @@ public class FolderTransactionAnalyticService {
             hourTransactionCountMap.merge(hour, 1, Integer::sum);
         }
     }
+
 }
