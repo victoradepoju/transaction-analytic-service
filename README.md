@@ -16,9 +16,8 @@ This project is a Java (Spring Boot) application designed to analyze transaction
 
 ## Project Overview
 
-The project is built using **Spring Boot** and provides a REST API to analyze transaction data. The data is stored in files, where each file represents transactions for a specific day. The application reads these files, processes the data, and provides insights through various endpoints.
+The project is built using **Spring Boot** and provides a REST API to analyze transaction data. The data is stored in files (.txt), where each file represents transactions for a specific day. The application reads these files, processes the data, and provides insights through various endpoints.
 
-Here's the structured `README.md` content that documents your project folder structure and provides a brief description of each component:
 
 ---
 
