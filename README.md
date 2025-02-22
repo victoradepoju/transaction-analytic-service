@@ -23,7 +23,6 @@ The project is built using **Spring Boot** and provides a REST API to analyze tr
 
 # Transaction Analytic Application
 
-This project processes transaction files to analyze sales data.
 
 ## 📁 Project Structure
 
