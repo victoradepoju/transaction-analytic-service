@@ -18,6 +18,62 @@ This project is a Java (Spring Boot) application designed to analyze transaction
 
 The project is built using **Spring Boot** and provides a REST API to analyze transaction data. The data is stored in files, where each file represents transactions for a specific day. The application reads these files, processes the data, and provides insights through various endpoints.
 
+Here's the structured `README.md` content that documents your project folder structure and provides a brief description of each component:
+
+---
+
+# Transaction Analytic Application
+
+This project processes transaction files to analyze sales data.
+
+## 📁 Project Structure
+
+```
+📦 transaction-analytic-application
+├── 📂 controller
+│   └── 📄 FolderTransactionAnalyticController.java
+├── 📂 dto
+│   └── 📄 TransactionAnalyticDto.java
+├── 📂 exception
+│   ├── 📄 ExceptionResponse.java
+│   └── 📄 GlobalExceptionHandler.java
+├── 📂 helper
+│   └── 📄 FileProcessor.java
+├── 📂 model
+│   └── 📄 Transaction.java
+├── 📂 service
+│   ├── 📄 SingleFileTransactionAnalyticService.java
+│   └── 📄 FolderTransactionAnalyticService.java
+└── 📄 TransactionAnalyticApplication.java
+```
+
+## 📌 Description
+
+- **controller/**  
+  - `FolderTransactionAnalyticController.java`: Handles HTTP requests for analyzing transactions from a folder of files.
+
+- **dto/**  
+  - `TransactionAnalyticDto.java`: Data Transfer Object (DTO) for returning transaction analysis responses.
+
+- **exception/**  
+  - `ExceptionResponse.java`: Defines the structure of error responses.  
+  - `GlobalExceptionHandler.java`: Centralized exception handling using `@ControllerAdvice`.
+
+- **helper/**  
+  - `FileProcessor.java`: Utility class for reading and processing transaction files.
+
+- **model/**  
+  - `Transaction.java`: Represents a transaction entity with attributes like amount, date, and ID.
+
+- **service/**  
+  - `SingleFileTransactionAnalyticService.java`: Processes transaction data from a single file.  
+  - `FolderTransactionAnalyticService.java`: Handles multiple files within a folder for batch transaction analysis.
+
+- **TransactionAnalyticApplication.java**  
+  - The main entry point for the Spring Boot application.
+
+---
+
 ### Key Features:
 - **Highest Sales Volume in a Day**: Calculates the highest total sales volume across all days.
 - **Highest Sales Value in a Day**: Finds the highest individual sales value across all days.
@@ -94,16 +150,25 @@ The following endpoints are available:
 - **Description**: Analyzes all transaction files in the folder and returns a summary of metrics.
 - **Response**:
   ```json
-  {
-    "highestSalesVolumeInADay": 78050.70,
-    "highestSalesValueInADay": 56270.94,
-    "mostSoldProductByVolume": "10792",
-    "highestSalesStaffByMonth": {
-      "2025-01": "2",
-      "2025-02": "4"
-    },
-    "highestHourByAverageTransactionVolume": 12
-  }
+	"highestSalesVolumeInADay": 25534189.142,
+	"highestSalesValueInADay": 86014.546,
+	"mostSoldProductByVolume": "338636",
+	"highestSalesStaffByMonth": {
+		"2025-07": "6",
+		"2025-05": "8",
+		"2025-09": "7",
+		"2025-10": "2",
+		"2025-06": "2",
+		"2025-08": "3",
+		"2025-01": "8",
+		"2025-02": "5",
+		"2025-11": "7",
+		"2025-12": "1",
+		"2025-04": "3",
+		"2025-03": "8"
+	},
+	"highestHourByAverageTransactionVolume": 16
+
   ```
 
 ### 2. Only Highest Sales Volume in a Day
@@ -117,13 +182,19 @@ The following endpoints are available:
 ### 3. Only Highest Sales Value in a Day
 - **Endpoint**: `POST /api/transaction-analysis/highest-sales-value?folderPath=/path/to/transaction/files`
 - **Description**: Returns the highest individual sales value across all days.
-- **Response**: 56270.94
+- **Response**:
+  ```json
+  56270.94
+  ```
   
 
 ### 4. Only Most Sold Product by Volume
 - **Endpoint**: `POST /api/transaction-analysis/most-sold-product?folderPath=/path/to/transaction/files`
 - **Description**: Returns the product ID with the highest total quantity sold.
-- **Response**: 10792
+- **Response**:
+  ```json
+  10792
+  ```
 
 ### 5. Only Highest Sales Staff by Month
 - **Endpoint**: `POST /api/transaction-analysis/highest-sales-staff-by-month?folderPath=/path/to/transaction/files`
@@ -147,7 +218,10 @@ The following endpoints are available:
 ### 6. Highest Hour by Average Transaction Volume
 - **Endpoint**: `POST /api/transaction-analysis/highest-hour-by-average-volume?folderPath=/path/to/transaction/files`
 - **Description**: Returns the hour of the day with the highest average transaction volume.
-- **Response**: 12
+- **Response**:
+  ```json
+  12
+  ```
 
 ---
 
@@ -196,4 +270,4 @@ If you want to use your own transaction files, ensure you provide the absolute p
 ---
 
 
-Thank you Moniepoint! 🚀
+# Thank you Moniepoint! 🚀
